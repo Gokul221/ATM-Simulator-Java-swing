@@ -4,6 +4,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.util.*;
+import java.sql.*;
 
 public class SignupThree extends JFrame implements ActionListener {
 
@@ -168,44 +169,60 @@ public class SignupThree extends JFrame implements ActionListener {
             String cardNumber = "" + Math.abs((random.nextLong() % 90000000L) + 5040936000000000L);
             String pinNumber = "" + Math.abs((random.nextLong() % 9000L) + 1000L);
 
-            String selectedServices = "";
-            if (atmCardCb.isSelected()) {
-                selectedServices += "ATM Card,";
-            }
-            if (internetBankingCb.isSelected()) {
-                selectedServices += " Internet Banking,";
-            }
-            if (mobileBankingCb.isSelected()) {
-                selectedServices += " Mobile Banking,";
-            }
-            if (alertsCb.isSelected()) {
-                selectedServices += " Email & SMS alerts,";
-            }
-            if (chequeBookCb.isSelected()) {
-                selectedServices += " Cheque Book,";
-            }
-            if (eStatementCb.isSelected()) {
-                selectedServices += " E-Statement,";
-            }
+            if (accountType == null) {
+                JOptionPane.showMessageDialog(null, "Choose account type");
+            } else if (!declarationCb.isSelected()) {
+                JOptionPane.showMessageDialog(null, "You must agree to the declaration");
+            } else {
+                StringBuilder selectedServices = new StringBuilder();
 
-            try {
-                if (accountType == null) {
-                    JOptionPane.showMessageDialog(null, "Choose account type");
-                } else if (!declarationCb.isSelected()) {
-                    JOptionPane.showMessageDialog(null, "You must agree to the declaration");
-                } else {
-                    DBconnection conn = new DBconnection();
-                    String query1 = "INSERT INTO signupthree VALUES('" + formNumber + "', '" + accountType + "', '" + cardNumber + "', '" + pinNumber + "', '" + selectedServices + "')";
-                    String query2 = "INSERT INTO login VALUES('" + formNumber + "', '" + cardNumber + "', '" + pinNumber + "')";
-                    conn.s.executeUpdate(query1);
-                    conn.s.executeUpdate(query2);
+                if (atmCardCb.isSelected()) {
+                    selectedServices.append("ATM Card");
+                }
+                if (internetBankingCb.isSelected()) {
+                    selectedServices.append("Internet Banking");
+                }
+                if (mobileBankingCb.isSelected()) {
+                    selectedServices.append("Mobile Banking");
+                }
+                if (alertsCb.isSelected()) {
+                    selectedServices.append("Email & SMS alerts");
+                }
+                if (chequeBookCb.isSelected()) {
+                    selectedServices.append("Cheque Book");
+                }
+                if (eStatementCb.isSelected()) {
+                    selectedServices.append("E-Statement");
+                }
 
-                    JOptionPane.showMessageDialog(null, "Card Number: " + cardNumber + "\n Pin: " + pinNumber);
+                // try-with-resources block to avoid memory leaks - DB connections and prepared statements are auto closed
+                try (DBconnection conn3 = new DBconnection(); 
+                        PreparedStatement pstmt1 = conn3.c.prepareStatement(
+                        "INSERT INTO signupthree (formNumber, accountType, cardNumber, pinNumber, servicesSelected) VALUES (?, ?, ?, ?, ?)"
+                );      PreparedStatement pstmt2 = conn3.c.prepareStatement(
+                        "INSERT INTO login (formNumber, cardNumber, pinNumber) VALUES (?, ?, ?)"
+                )) {
+                    // Insert into signupthree
+                    pstmt1.setString(1, formNumber);
+                    pstmt1.setString(2, accountType);
+                    pstmt1.setString(3, cardNumber);
+                    pstmt1.setString(4, pinNumber);
+                    pstmt1.setString(5, selectedServices.toString());
+                    pstmt1.executeUpdate();
+
+                    // Insert into login
+                    pstmt2.setString(1, formNumber);
+                    pstmt2.setString(2, cardNumber);
+                    pstmt2.setString(3, pinNumber);
+                    pstmt2.executeUpdate();
+
+                    JOptionPane.showMessageDialog(null, "Card Number: " + cardNumber + "\nPin: " + pinNumber);
                     setVisible(false);
                     new Transactions(pinNumber).setVisible(true);
+
+                } catch (Exception e) {
+                    JOptionPane.showMessageDialog(null, "Database Error: " + e.getMessage());
                 }
-            } catch (Exception e) {
-                e.printStackTrace();
             }
         } else if (ae.getSource() == cancel) {
             setVisible(false);
@@ -215,6 +232,5 @@ public class SignupThree extends JFrame implements ActionListener {
 
     public static void main(String args[]) {
         new SignupThree("");
-
     }
 }

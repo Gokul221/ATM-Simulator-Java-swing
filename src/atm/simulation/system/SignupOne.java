@@ -5,6 +5,7 @@ import java.awt.*;
 import java.util.*;
 import com.toedter.calendar.JDateChooser;
 import java.awt.event.*;
+import java.sql.*;
 import java.util.regex.*;
 
 public class SignupOne extends JFrame implements ActionListener {
@@ -221,46 +222,53 @@ public class SignupOne extends JFrame implements ActionListener {
         boolean isEmailValid = EMAIL_PATTERN.matcher(email).matches();
         boolean isPinValid = PIN_PATTERN.matcher(pin).matches();
 
-        try {
-            if (name.isBlank()) {
-                JOptionPane.showMessageDialog(null, "Name is required");
-            } else if (dateChooser.getDate() == null) {
-                JOptionPane.showMessageDialog(null, "Date of Birth is required");
-                
-            } else if (email.isBlank()) {
-                JOptionPane.showMessageDialog(null, "Email is required");
-                
-            } else if (!isEmailValid) {
-                JOptionPane.showMessageDialog(null, "Enter valid Email address");
-                
-            } else if (gender == null) {
-                JOptionPane.showMessageDialog(null, "Gender is required");
-                
-            } else if (address.isBlank()) {
-                JOptionPane.showMessageDialog(null, "Address is required");
-                
-            } else if (city.isBlank()) {
-                JOptionPane.showMessageDialog(null, "City is required");
-                
-            } else if (state.isBlank()) {
-                JOptionPane.showMessageDialog(null, "State is required");
-                
-            } else if (pin.isBlank()) {
-                JOptionPane.showMessageDialog(null, "Pin Code is required");
-                
-            } else if (!isPinValid) {
-                JOptionPane.showMessageDialog(null, "Enter valid 6-digit Pin Code");
-                
-            } else {
-                DBconnection conn = new DBconnection();
-                String query = "INSERT INTO signup VALUES('" + formNumber + "', '" + name + "', '" + fatherName + "', '" + dob + "', '" + gender + "', '" + email + "', '" + maritalStatus + "', '" + address + "', '" + city + "', '" + state + "', '" + pin + "' )";
-                conn.s.executeUpdate(query);
-                
+        if (name.isBlank()) {
+            JOptionPane.showMessageDialog(null, "Name is required");
+        } else if (dateChooser.getDate() == null) {
+            JOptionPane.showMessageDialog(null, "Date of Birth is required");
+        } else if (email.isBlank()) {
+            JOptionPane.showMessageDialog(null, "Email is required");
+        } else if (!isEmailValid) {
+            JOptionPane.showMessageDialog(null, "Enter valid Email address");
+        } else if (gender == null) {
+            JOptionPane.showMessageDialog(null, "Gender is required");
+        } else if (address.isBlank()) {
+            JOptionPane.showMessageDialog(null, "Address is required");
+        } else if (city.isBlank()) {
+            JOptionPane.showMessageDialog(null, "City is required");
+        } else if (state.isBlank()) {
+            JOptionPane.showMessageDialog(null, "State is required");
+        } else if (pin.isBlank()) {
+            JOptionPane.showMessageDialog(null, "Pin Code is required");
+        } else if (!isPinValid) {
+            JOptionPane.showMessageDialog(null, "Enter valid 6-digit Pin Code");
+        } else {
+            // try-with-resources block to avoid memory leaks - DB connections and prepared statements are auto closed
+            try (DBconnection conn1 = new DBconnection(); 
+                    PreparedStatement pstmt = conn1.c.prepareStatement(
+                    "INSERT INTO signup (form_number, user_name, father_name, dob, gender, email, marital_status, address, city, state, pin) "
+                    + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+            )) {
+                pstmt.setString(1, formNumber);
+                pstmt.setString(2, name);
+                pstmt.setString(3, fatherName);
+                pstmt.setString(4, dob);
+                pstmt.setString(5, gender);
+                pstmt.setString(6, email);
+                pstmt.setString(7, maritalStatus);
+                pstmt.setString(8, address);
+                pstmt.setString(9, city);
+                pstmt.setString(10, state);
+                pstmt.setString(11, pin);
+
+                pstmt.executeUpdate();
+
                 setVisible(false);
                 new SignupTwo(formNumber).setVisible(true);
+
+            } catch (Exception e) {
+                JOptionPane.showMessageDialog(null, "Database Error: " + e.getMessage());
             }
-        } catch (Exception e) {
-            System.out.println(e);
         }
     }
 

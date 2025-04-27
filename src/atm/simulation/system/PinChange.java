@@ -3,6 +3,7 @@ package atm.simulation.system;
 import javax.swing.*;
 import java.awt.event.*;
 import java.awt.*;
+import java.sql.*;
 
 public class PinChange extends JFrame implements ActionListener {
 
@@ -88,16 +89,38 @@ public class PinChange extends JFrame implements ActionListener {
                     return;
                 }
 
-                DBconnection conn = new DBconnection();
-                String query1 = "update bank set pin = '" + rePin + "' where pin = '" + pinNumber + "' ";
-                String query2 = "update login set pinNumber = '" + rePin + "' where pinNumber = '" + pinNumber + "' ";
-                String query3 = "update signupthree set pinNumber = '" + rePin + "' where pinNumber = '" + pinNumber + "' ";
-                conn.s.executeUpdate(query1);
-                conn.s.executeUpdate(query2);
-                conn.s.executeUpdate(query3);
-                JOptionPane.showMessageDialog(null, "PIN changed successfully!!");
-                setVisible(false);
-                new Transactions(rePin).setVisible(true);
+                try (DBconnection conn = new DBconnection()) {
+                    // Use prepared statements to safely update the PIN
+                    String query1 = "UPDATE bank SET pin = ? WHERE pin = ?";
+                    try (PreparedStatement pstmt1 = conn.c.prepareStatement(query1)) {
+                        pstmt1.setString(1, rePin);
+                        pstmt1.setString(2, pinNumber);
+                        pstmt1.executeUpdate();
+                    }
+
+                    String query2 = "UPDATE login SET pinNumber = ? WHERE pinNumber = ?";
+                    try (PreparedStatement pstmt2 = conn.c.prepareStatement(query2)) {
+                        pstmt2.setString(1, rePin);
+                        pstmt2.setString(2, pinNumber);
+                        pstmt2.executeUpdate();
+                    }
+
+                    String query3 = "UPDATE signupthree SET pinNumber = ? WHERE pinNumber = ?";
+                    try (PreparedStatement pstmt3 = conn.c.prepareStatement(query3)) {
+                        pstmt3.setString(1, rePin);
+                        pstmt3.setString(2, pinNumber);
+                        pstmt3.executeUpdate();
+                    }
+
+                    JOptionPane.showMessageDialog(null, "PIN changed successfully!!");
+                    setVisible(false);
+                    new Transactions(rePin).setVisible(true);
+
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    JOptionPane.showMessageDialog(null, "Error updating PIN");
+                }
+
             } catch (Exception e) {
                 e.printStackTrace();
             }

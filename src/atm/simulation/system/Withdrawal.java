@@ -59,31 +59,48 @@ public class Withdrawal extends JFrame implements ActionListener {
             if (amtNumber.isEmpty()) {
                 JOptionPane.showMessageDialog(null, "Please enter a valid amount number");
             } else {
-                try {
-                    DBconnection conn = new DBconnection();
-                    ResultSet rs = conn.s.executeQuery("SELECT * FROM bank WHERE pin = '" + pinNumber + "' ");
-                    int balance = 0;
-                    while (rs.next()) {
-                        if (rs.getString("transactionType").trim().equals("Deposit")) {
-                            balance += Integer.parseInt(rs.getString("amount"));
-                        } else {
-                            balance -= Integer.parseInt(rs.getString("amount"));
+                try (DBconnection conn = new DBconnection()) {
+
+                    // First, use a PreparedStatement to safely query the bank table
+                    String queryBalance = "SELECT * FROM bank WHERE pin = ?";
+                    try (PreparedStatement pstmt = conn.c.prepareStatement(queryBalance)) {
+                        pstmt.setString(1, pinNumber);
+
+                        try (ResultSet rs = pstmt.executeQuery()) {
+                            int balance = 0;
+                            while (rs.next()) {
+                                if (rs.getString("transactionType").trim().equals("Deposit")) {
+                                    balance += Integer.parseInt(rs.getString("amount"));
+                                } else {
+                                    balance -= Integer.parseInt(rs.getString("amount"));
+                                }
+                            }
+
+                            // Check if the balance is sufficient
+                            if (balance < Integer.parseInt(amtNumber)) {
+                                JOptionPane.showMessageDialog(null, "Insufficient Balance");
+                                return;
+                            }
                         }
                     }
 
-                    if (balance < Integer.parseInt(amtNumber)) {
-                        JOptionPane.showMessageDialog(null, "Insufficient Balance");
-                        return;
+                    // Now, use a PreparedStatement for the withdrawal query
+                    String queryWithdrawal = "INSERT INTO bank (pin, depositDateTime, transactionType, amount) VALUES (?, ?, 'Withdrawal', ?)";
+                    try (PreparedStatement pstmt = conn.c.prepareStatement(queryWithdrawal)) {
+                        pstmt.setString(1, pinNumber);
+                        pstmt.setTimestamp(2, timestamp);  // Assuming timestamp is already defined
+                        pstmt.setString(3, amtNumber);
+
+                        pstmt.executeUpdate();
                     }
 
-                    String query = "INSERT INTO bank VALUES ('" + pinNumber + "', '" + timestamp + "', 'Withdrawal', '" + amtNumber + "')";
-                    conn.s.executeUpdate(query);
                     JOptionPane.showMessageDialog(null, "Rs. " + amtNumber + " Withdrawn successfully!");
                     setVisible(false);
                     new Transactions(pinNumber).setVisible(true);
-                    
+
                 } catch (Exception e) {
                     e.printStackTrace();
+                    JOptionPane.showMessageDialog(null, "An error occurred while processing the transaction.");
                 }
             }
         } else if (ae.getSource() == back) {

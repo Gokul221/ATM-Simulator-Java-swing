@@ -25,19 +25,27 @@ public class BalanceEnquiry extends JFrame implements ActionListener {
         back.addActionListener(this);
         image.add(back);
 
-        DBconnection conn = new DBconnection();
         int balance = 0;
-        try {
-            ResultSet rs = conn.s.executeQuery("select * from bank where pin = '" + pinNumber + "' ");
-            while (rs.next()) {
-                if (rs.getString("transactionType").trim().equals("Deposit")) {
-                    balance += Integer.parseInt(rs.getString("amount"));
-                } else {
-                    balance -= Integer.parseInt(rs.getString("amount"));
+
+        String query = "SELECT * FROM bank WHERE pin = ?";
+
+        try (DBconnection conn = new DBconnection(); 
+             PreparedStatement pstmt = conn.c.prepareStatement(query)) {
+
+            pstmt.setString(1, pinNumber);
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    if (rs.getString("transactionType").trim().equals("Deposit")) {
+                        balance += Integer.parseInt(rs.getString("amount"));
+                    } else {
+                        balance -= Integer.parseInt(rs.getString("amount"));
+                    }
                 }
             }
         } catch (Exception e) {
             e.printStackTrace();
+            JOptionPane.showMessageDialog(null, "Error occurred while fetching balance.");
         }
 
         JLabel text = new JLabel("Your account balance is Rs. " + balance);

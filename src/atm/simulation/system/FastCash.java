@@ -80,29 +80,57 @@ public class FastCash extends JFrame implements ActionListener {
             new Transactions(pinNumber).setVisible(true);
         } else {
             String amount = ((JButton) ae.getSource()).getText().substring(4);
-            DBconnection conn = new DBconnection();
-            try {
-                ResultSet rs = conn.s.executeQuery("select * from bank where pin = '" + pinNumber + "' ");
-                int balance = 0;
-                while (rs.next()) {
-                    if (rs.getString("transactionType").trim().equals("Deposit")) {
-                        balance += Integer.parseInt(rs.getString("amount"));
-                    } else {
-                        balance -= Integer.parseInt(rs.getString("amount"));
+
+            // try-with-resources block to avoid memory leaks - DB connections and prepared statements are auto closed
+            try (DBconnection conn = new DBconnection()) {
+
+                // Execute query and fetch the result using PreparedStatement
+                String query = "SELECT * FROM bank WHERE pin = ?";
+                try (PreparedStatement pstmt = conn.c.prepareStatement(query)) {
+                    pstmt.setString(1, pinNumber);
+
+                    try (ResultSet rs = pstmt.executeQuery()) {
+                        int balance = 0;
+                        while (rs.next()) {
+                            if (rs.getString("transactionType").trim().equals("Deposit")) {
+                                balance += Integer.parseInt(rs.getString("amount"));
+                            } else {
+                                balance -= Integer.parseInt(rs.getString("amount"));
+                            }
+                        }
+
+                        if (balance < Integer.parseInt(amount)) {
+                            JOptionPane.showMessageDialog(null, "Insufficient Balance");
+                            return;
+                        }
+
+                        // Insert the withdrawal record
+                        Timestamp timestamp = new Timestamp(System.currentTimeMillis());
+                        String insertQuery = "INSERT INTO bank (pin, depositDateTime, transactionType, amount) VALUES (?, ?, 'Withdrawal', ?)";
+
+                        try (PreparedStatement insertStmt = conn.c.prepareStatement(insertQuery)) {
+                            insertStmt.setString(1, pinNumber);
+                            insertStmt.setTimestamp(2, timestamp);
+                            insertStmt.setString(3, amount);
+                            insertStmt.executeUpdate();
+                        }
+
+                        JOptionPane.showMessageDialog(null, "Rs. " + amount + " Debited successfully!");
+                        setVisible(false);
+                        new Transactions(pinNumber).setVisible(true);
+
+                    } catch (Exception e) {
+                        JOptionPane.showMessageDialog(null, "Error while retrieving balance: " + e.getMessage());
+                        e.printStackTrace();
                     }
+
+                } catch (Exception e) {
+                    JOptionPane.showMessageDialog(null, "Database error: " + e.getMessage());
+                    e.printStackTrace();
                 }
-                if (ae.getSource() != back && balance < Integer.parseInt(amount)) {
-                    JOptionPane.showMessageDialog(null, "Insufficient Balance");
-                    return;
-                }
-                Timestamp timestamp = new Timestamp(System.currentTimeMillis());
-                String query = "insert into bank values('" + pinNumber + "', '" + timestamp + "', 'Withdrawal', '" + amount + "')";
-                conn.s.executeUpdate(query);
-                JOptionPane.showMessageDialog(null, "Rs. " + amount + " Debited successfully!");
-                setVisible(false);
-                new Transactions(pinNumber).setVisible(true);
 
             } catch (Exception e) {
+                JOptionPane.showMessageDialog(null, "Database connection Error: " + e.getMessage());
                 e.printStackTrace();
             }
         }

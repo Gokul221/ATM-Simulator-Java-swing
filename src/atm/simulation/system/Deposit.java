@@ -58,15 +58,24 @@ public class Deposit extends JFrame implements ActionListener {
             if (amtNumber.isBlank()) {
                 JOptionPane.showMessageDialog(null, "Please enter a valid amount number");
             } else {
-                try {
-                    DBconnection conn = new DBconnection();
-                    String query = "INSERT INTO bank VALUES ('" + pinNumber + "', '" + timestamp + "', '   Deposit ', '" + amtNumber + "')";
-                    conn.s.executeUpdate(query);
+                String query = "INSERT INTO bank (pin, depositDateTime, transactionType, amount) VALUES (?, ?, '   Deposit  ', ?)";
+
+                // try-with-resources block to avoid memory leaks - DB connections and prepared statements are auto closed
+                try (DBconnection conn = new DBconnection(); 
+                        PreparedStatement pstmt = conn.c.prepareStatement(query)) {
+
+                    pstmt.setString(1, pinNumber);
+                    pstmt.setTimestamp(2, timestamp);
+                    pstmt.setString(3, amtNumber);
+
+                    pstmt.executeUpdate();
+
                     JOptionPane.showMessageDialog(null, "Rs. " + amtNumber + " Deposited Successfully!");
                     setVisible(false);
                     new Transactions(pinNumber).setVisible(true);
+
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    JOptionPane.showMessageDialog(null, "An error occurred while processing your transaction.");
                 }
             }
         } else if (ae.getSource() == back) {

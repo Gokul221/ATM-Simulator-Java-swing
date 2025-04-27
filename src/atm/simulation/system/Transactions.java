@@ -6,7 +6,7 @@ import java.awt.event.*;
 
 public class Transactions extends JFrame implements ActionListener {
 
-    JButton deposit, withdrawal, miniStatement, fastCash, pinChange, balanceEnquiry, services, exit;
+    JButton deposit, withdrawal, miniStatement, fastCash, pinChange, balanceEnquiry, exit;
     String pinNumber;
 
     public Transactions(String pin) {

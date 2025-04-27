@@ -102,18 +102,24 @@ public class Login extends JFrame implements ActionListener {
             String cardNumber = cardNumberTextField.getText();
             char[] pinChars = pinTextField.getPassword();
             String pin = new String(pinChars);
-            String query = "SELECT * FROM login WHERE cardnumber = '" + cardNumber + "' and pinNumber = '" + pin + "'";
-            try {
-                ResultSet rs = conn.s.executeQuery(query);
-                if (rs.next()) {
-                    setVisible(false);
-                    new Transactions(pin).setVisible(true);
-                } else {
-                    JOptionPane.showMessageDialog(null, "Incorrect Card Number or PIN");
-                }
 
+            String query = "SELECT * FROM login WHERE cardnumber = ? AND pinNumber = ?";
+
+            try (PreparedStatement pstmt = conn.c.prepareStatement(query)) {
+                pstmt.setString(1, cardNumber);
+                pstmt.setString(2, pin);
+
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    if (rs.next()) {
+                        setVisible(false);
+                        new Transactions(pin).setVisible(true);
+                    } else {
+                        JOptionPane.showMessageDialog(null, "Incorrect Card Number or PIN");
+                    }
+                }
             } catch (Exception e) {
                 e.printStackTrace();
+                JOptionPane.showMessageDialog(null, "Error occurred while logging in.");
             }
         } else if (ae.getSource() == signup) {
             setVisible(false);

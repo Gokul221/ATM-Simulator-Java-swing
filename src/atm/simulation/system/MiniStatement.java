@@ -35,9 +35,8 @@ public class MiniStatement extends JFrame implements ActionListener {
         add(label);
 
         // Fetch and mask card number
-        try {
-            DBconnection conn = new DBconnection();
-            ResultSet rs = conn.s.executeQuery("SELECT * FROM login WHERE pinNumber = '" + pinNumber + "' ");
+        try (DBconnection conn = new DBconnection(); ResultSet rs = conn.s.executeQuery("SELECT * FROM login WHERE pinNumber = '" + pinNumber + "' ")) {
+
             while (rs.next()) {
                 card.setText("Card number: " + rs.getString("cardnumber").substring(0, 4) + "XXXXXXXX" + rs.getString("cardnumber").substring(12));
             }
@@ -46,27 +45,26 @@ public class MiniStatement extends JFrame implements ActionListener {
         }
 
         // Fetch account transactions
-        try {
-            DBconnection conn = new DBconnection();
-            ResultSet rs = conn.s.executeQuery(
-                    "SELECT * FROM bank WHERE pin = '" + pinNumber + "' ORDER BY depositDateTime DESC LIMIT 5"
-            );
+        try (DBconnection conn = new DBconnection(); PreparedStatement pstmt = conn.c.prepareStatement(
+                "SELECT * FROM bank WHERE pin = ? ORDER BY depositDateTime DESC LIMIT 5"
+        )) {
 
-            StringBuilder transactions = new StringBuilder("<html>");
-            while (rs.next()) {
-                transactions.append(rs.getString("depositDateTime"))
-                        .append("&nbsp;&nbsp;|&nbsp;&nbsp;")
-                        .append(rs.getString("transactionType"))
-                        .append("&nbsp;&nbsp;|&nbsp;&nbsp;")
-                        .append(rs.getString("amount"))
-                        .append("<br><br>");
+            pstmt.setString(1, pinNumber);
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                StringBuilder transactions = new StringBuilder("<html>");
+                while (rs.next()) {
+                    transactions.append(rs.getString("depositDateTime"))
+                            .append("&nbsp;&nbsp;|&nbsp;&nbsp;")
+                            .append(rs.getString("transactionType"))
+                            .append("&nbsp;&nbsp;|&nbsp;&nbsp;")
+                            .append(rs.getString("amount"))
+                            .append("<br><br>");
+                }
+                transactions.append("</html>");
+                miniStatement.setText(transactions.toString());
             }
-            transactions.append("</html>");
-            miniStatement.setText(transactions.toString());
 
-//            while (rs.next()) {
-//                miniStatement.setText(miniStatement.getText() + "<html>" + rs.getString("depositDateTime") + "&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;" + rs.getString("transactionType") + "&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;" + rs.getString("amount") + "<br><br><html>");
-//            }
         } catch (Exception e) {
             e.printStackTrace();
         }

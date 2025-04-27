@@ -1,8 +1,9 @@
 package atm.simulation.system;
 
 import java.sql.*;
+import javax.swing.*;
 
-public class DBconnection {
+public class DBconnection implements AutoCloseable {
 
     Connection c;
     Statement s;
@@ -15,7 +16,17 @@ public class DBconnection {
             // create statement
             s = c.createStatement();
         } catch (Exception e) {
-            System.out.println(e);
+            JOptionPane.showMessageDialog(null, "Database Error: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public void close() throws Exception {
+        if (c != null) {
+            c.close();
+        }
+        if (s != null) {
+            s.close();
         }
     }
 
