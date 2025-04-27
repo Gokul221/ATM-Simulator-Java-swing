@@ -1,0 +1,13 @@
+# Ignore build outputs
+build/
+dist/
+*.class
+
+# Ignore NetBeans private settings
+nbproject/
+test/
+
+manifest.mf
+
+# Ignore MacOS system files
+.DS_Store
